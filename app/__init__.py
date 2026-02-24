@@ -12,4 +12,7 @@ def create_app():
     migrate.init_app(app, db)
     jwt.init_app(app)
 
+    # register models
+    from app.models import User, Task
+
     return app
