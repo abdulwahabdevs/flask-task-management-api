@@ -35,3 +35,34 @@ def register():
     db.session.commit()
 
     return jsonify({"message": "User registered successfully"}), 201
+
+from flask_jwt_extended import create_access_token
+from werkzeug.security import check_password_hash
+
+@auth_bp.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
+    
+    email = data.get("email")
+    password = data.get("password")
+
+    if not email or not password:
+        return jsonify({"error": "Missing email or password"}), 400
+    
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        return jsonify({"error": "Invalid credentials"}), 401
+    
+    if not check_password_hash(user.password_hash, password):
+        return jsonify({"error": "Invalid credentials"}), 401
+    
+    access_token = create_access_token(identity=user.id)
+
+    return jsonify({
+        "message": "Login successful",
+        "access_token": access_token
+    }), 200
