@@ -60,9 +60,26 @@ def login():
     if not check_password_hash(user.password_hash, password):
         return jsonify({"error": "Invalid credentials"}), 401
     
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
 
     return jsonify({
         "message": "Login successful",
         "access_token": access_token
+    }), 200
+
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+@auth_bp.route("/me", methods=["GET"])
+@jwt_required()
+def get_current_user():
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    
+    return jsonify({
+        "id": user.id,
+        "email": user.email,
+        "username": user.username
     }), 200
