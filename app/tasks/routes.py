@@ -51,3 +51,20 @@ def get_tasks():
         })
 
     return jsonify(result), 200
+
+@tasks_bp.route("/<int:task_id>", methods=["GET"])
+@jwt_required()
+def get_task(task_id):
+    user_id = int(get_jwt_identity())
+
+    task = Task.query.get_or_404(task_id)
+
+    if task.user_id != user_id:
+        return jsonify({"error": "Forbidden"}), 403
+    
+    return jsonify({
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "completed": task.completed
+    }), 200
