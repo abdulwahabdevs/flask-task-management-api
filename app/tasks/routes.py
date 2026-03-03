@@ -68,3 +68,46 @@ def get_task(task_id):
         "description": task.description,
         "completed": task.completed
     }), 200
+
+@tasks_bp.route("/<int:task_id>", methods=["PUT"])
+@jwt_required()
+def update_task(task_id):
+    user_id = int(get_jwt_identity())
+    task = Task.query.get_or_404(task_id)
+
+    if task.user_id != user_id:
+        return jsonify({"error": "Forbidden"}), 403
+    
+    data = request.get_json()
+
+    if "title" in data:
+        task.title = data["title"]
+
+    if "description" in data:
+        task.description = data["description"]
+
+    if "completed" in data:
+        task.completed = data["completed"]
+    
+    db.session.commit()
+
+    return jsonify({
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "completed": task.completed
+    }), 200
+
+@tasks_bp.route("/<int:task_id>", methods=["DELETE"])
+@jwt_required()
+def delete_task(task_id):
+    user_id = int(get_jwt_identity())
+    task = Task.query.get_or_404(task_id)
+
+    if task.user_id != user_id:
+        return jsonify({"error": "Forbidden"}), 403
+    
+    db.session.delete(task)
+    db.session.commit()
+
+    return jsonify({"message": "Task deleted successfully"}), 200
