@@ -8,16 +8,24 @@ from app.extensions import db
 @jwt_required()
 def create_task():
     user_id = int(get_jwt_identity())
-    data = request.get_json()
+    data = request.get_json() or {}
 
-    if not data:
+    if data is None:
         return jsonify({"error":"Invalid JSON"}), 400
-
+    
     title = data.get("title")
     description = data.get("description")
+    
+    errors = {}
 
-    if not title or not description:
-        return jsonify({"error": "Title and description is required"}), 400
+    if not title:
+        errors["title"] = "Title is required"
+    
+    if not description:
+        errors["description"] = "Description is required!"
+
+    if errors:
+        return jsonify({"errors": errors}), 400
     
     task = Task(
                 title=title,
@@ -78,7 +86,7 @@ def update_task(task_id):
     if task.user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
     
-    data = request.get_json()
+    data = request.get_json() or {}
 
     if "title" in data:
         task.title = data["title"]
