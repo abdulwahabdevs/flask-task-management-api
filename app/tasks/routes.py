@@ -86,7 +86,31 @@ def update_task(task_id):
     if task.user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
     
-    data = request.get_json() or {}
+    data = request.get_json()
+
+    if data is None:
+        return jsonify({"error":"Invalid JSON"}), 400
+
+    allowed_fields = {"title", "description", "completed"}
+
+    if not any(field in data for field in allowed_fields):
+        return jsonify({
+            "error": "At least one of title, description, or completed must be provided"
+        }), 400
+    
+    errors = {}
+    
+    if "title" in data and not isinstance(data["title"], str):
+        errors["title"] = "Title must be string"
+
+    if "description" in data and not isinstance(data["description"], str):
+        errors["description"] = "Description must be a string"
+
+    if "completed" in data and not isinstance(data["completed"], bool):
+        errors["completed"] = "Completed must be true or false"
+
+    if errors:
+        return jsonify({"errors": errors}), 400
 
     if "title" in data:
         task.title = data["title"]
