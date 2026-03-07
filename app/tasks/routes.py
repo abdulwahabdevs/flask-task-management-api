@@ -47,7 +47,16 @@ def create_task():
 def get_tasks():
     user_id = int(get_jwt_identity())
 
-    tasks = Task.query.filter_by(user_id=user_id).all()
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 5, type=int)
+
+    pagination = Task.query.filter_by(user_id=user_id).paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+
+    tasks = pagination.items
 
     result = []
     for task in tasks:
@@ -58,7 +67,12 @@ def get_tasks():
             "completed": task.completed
         })
 
-    return jsonify(result), 200
+    return jsonify({
+        "tasks": result,
+        "page": pagination.page,
+        "pages": pagination.pages,
+        "total": pagination.total
+    }), 200
 
 @tasks_bp.route("/<int:task_id>", methods=["GET"])
 @jwt_required()
