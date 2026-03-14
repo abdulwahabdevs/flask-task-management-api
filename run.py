@@ -1,5 +1,6 @@
-from dotenv import load_dotenv # isort: skip
-load_dotenv()   # isort: skip
+from dotenv import load_dotenv # isort:skip
+load_dotenv()   # isort:skip
+
 
 from app import create_app
 
