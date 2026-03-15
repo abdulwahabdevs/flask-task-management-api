@@ -89,3 +89,23 @@ def test_user_cannot_access_other_users_task(client, auth_client):
 
     print(response.get_json())
     assert response.status_code == 403
+
+
+def test_create_task_missing_title(auth_client):
+
+    response = auth_client.post("/tasks/", json={
+        "description": "no title"
+    })
+
+    assert response.status_code == 400
+
+
+def test_create_task_invalid_completed(auth_client):
+
+    response = auth_client.post("/tasks/", json={
+        "title": "Task",
+        "description": "test",
+        "completed": "yes"
+    })
+
+    assert response.status_code == 400

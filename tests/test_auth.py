@@ -42,3 +42,10 @@ def test_login_wrong_password(client, test_user):
     })
 
     assert response.status_code == 401
+
+def test_access_without_token(client):
+
+    response = client.get("/tasks/")
+
+    assert response.status_code == 401
+

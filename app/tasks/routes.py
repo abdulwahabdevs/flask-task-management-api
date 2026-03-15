@@ -4,43 +4,72 @@ from app.tasks import tasks_bp
 from app.models import Task
 from app.extensions import db
 
+
+def validate_task_data(data, require_all_fields=False):
+    errors = {}
+
+    title = data.get("title")
+    description = data.get("description")
+    completed = data.get("completed")
+
+    if require_all_fields:
+        if not title:
+            errors["title"] = "Title is required"
+        
+        if not description:
+            errors["description"] = "Description is required"
+
+    if title is not None and not isinstance(title, str):
+        errors["title"] = "Title must be string"
+    
+    if description is not None and not isinstance(description, str):
+        errors["description"] = "Description must be string"
+
+    if completed is not None and not isinstance(completed, bool):
+        errors["completed"] = "Completed must be true or false"
+
+    return errors
+
+
+def serialize_task(task):
+    return {
+        "id": task.id,
+        "title": task.title,
+        "description": task.description,
+        "completed": task.completed
+    }
+
+
 @tasks_bp.route("/", methods=["POST"])
 @jwt_required()
 def create_task():
     user_id = int(get_jwt_identity())
-    data = request.get_json() or {}
+    data = request.get_json()
 
     if data is None:
         return jsonify({"error":"Invalid JSON"}), 400
     
     title = data.get("title")
     description = data.get("description")
+    completed = data.get("completed", False)
     
-    errors = {}
-
-    if not title:
-        errors["title"] = "Title is required"
+    errors = validate_task_data(data, require_all_fields=True)
     
-    if not description:
-        errors["description"] = "Description is required!"
-
     if errors:
         return jsonify({"errors": errors}), 400
     
     task = Task(
                 title=title,
                 description=description,
+                completed=completed,
                 user_id=user_id
     )
 
     db.session.add(task)
     db.session.commit()
 
-    return jsonify({
-        "id": task.id,
-        "title": task.title,
-        "description": task.description
-    }), 201
+    return jsonify(serialize_task(task)), 201
+
 
 @tasks_bp.route("/", methods=["GET"])
 @jwt_required()
@@ -58,14 +87,7 @@ def get_tasks():
 
     tasks = pagination.items
 
-    result = []
-    for task in tasks:
-        result.append({
-            "id": task.id,
-            "title": task.title,
-            "description": task.description,
-            "completed": task.completed
-        })
+    result = [serialize_task(task) for task in tasks]
 
     return jsonify({
         "tasks": result,
@@ -73,6 +95,7 @@ def get_tasks():
         "pages": pagination.pages,
         "total": pagination.total
     }), 200
+
 
 @tasks_bp.route("/<int:task_id>", methods=["GET"])
 @jwt_required()
@@ -84,12 +107,8 @@ def get_task(task_id):
     if task.user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
     
-    return jsonify({
-        "id": task.id,
-        "title": task.title,
-        "description": task.description,
-        "completed": task.completed
-    }), 200
+    return jsonify(serialize_task(task)), 200
+
 
 @tasks_bp.route("/<int:task_id>", methods=["PUT"])
 @jwt_required()
@@ -112,17 +131,8 @@ def update_task(task_id):
             "error": "At least one of title, description, or completed must be provided"
         }), 400
     
-    errors = {}
+    errors = validate_task_data(data)
     
-    if "title" in data and not isinstance(data["title"], str):
-        errors["title"] = "Title must be string"
-
-    if "description" in data and not isinstance(data["description"], str):
-        errors["description"] = "Description must be a string"
-
-    if "completed" in data and not isinstance(data["completed"], bool):
-        errors["completed"] = "Completed must be true or false"
-
     if errors:
         return jsonify({"errors": errors}), 400
 
@@ -137,12 +147,8 @@ def update_task(task_id):
     
     db.session.commit()
 
-    return jsonify({
-        "id": task.id,
-        "title": task.title,
-        "description": task.description,
-        "completed": task.completed
-    }), 200
+    return jsonify(serialize_task(task)), 200
+
 
 @tasks_bp.route("/<int:task_id>", methods=["DELETE"])
 @jwt_required()
