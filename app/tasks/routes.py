@@ -1,8 +1,7 @@
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.tasks import tasks_bp
-from app.models import Task
-from app.extensions import db
+from app.services import task_service
 
 
 def validate_task_data(data, require_all_fields=False):
@@ -58,15 +57,12 @@ def create_task():
     if errors:
         return jsonify({"errors": errors}), 400
     
-    task = Task(
-                title=title,
-                description=description,
-                completed=completed,
-                user_id=user_id
+    task = task_service.create_task(
+        user_id,
+        title,
+        description,
+        completed
     )
-
-    db.session.add(task)
-    db.session.commit()
 
     return jsonify(serialize_task(task)), 201
 
@@ -79,11 +75,7 @@ def get_tasks():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 5, type=int)
 
-    pagination = Task.query.filter_by(user_id=user_id).paginate(
-        page=page,
-        per_page=per_page,
-        error_out=False
-    )
+    pagination = task_service.get_user_tasks(user_id, page, per_page)
 
     tasks = pagination.items
 
@@ -102,7 +94,7 @@ def get_tasks():
 def get_task(task_id):
     user_id = int(get_jwt_identity())
 
-    task = Task.query.get_or_404(task_id)
+    task = task_service.get_task_by_id(task_id)
 
     if task.user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
@@ -114,7 +106,7 @@ def get_task(task_id):
 @jwt_required()
 def update_task(task_id):
     user_id = int(get_jwt_identity())
-    task = Task.query.get_or_404(task_id)
+    task = task_service.get_task_by_id(task_id)
 
     if task.user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
@@ -136,16 +128,7 @@ def update_task(task_id):
     if errors:
         return jsonify({"errors": errors}), 400
 
-    if "title" in data:
-        task.title = data["title"]
-
-    if "description" in data:
-        task.description = data["description"]
-
-    if "completed" in data:
-        task.completed = data["completed"]
-    
-    db.session.commit()
+    task = task_service.update_task(task, data)
 
     return jsonify(serialize_task(task)), 200
 
@@ -154,12 +137,11 @@ def update_task(task_id):
 @jwt_required()
 def delete_task(task_id):
     user_id = int(get_jwt_identity())
-    task = Task.query.get_or_404(task_id)
+    task = task_service.get_task_by_id(task_id)
 
     if task.user_id != user_id:
         return jsonify({"error": "Forbidden"}), 403
     
-    db.session.delete(task)
-    db.session.commit()
+    task_service.delete_task(task)
 
     return jsonify({"message": "Task deleted successfully"}), 200
