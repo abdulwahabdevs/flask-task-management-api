@@ -1,5 +1,5 @@
 from app.models import Task
-from app.extensions import db
+from app.repositories import task_repository
 
 
 def create_task(user_id, title, description, completed=False):
@@ -10,22 +10,15 @@ def create_task(user_id, title, description, completed=False):
         user_id=user_id
     )
 
-    db.session.add(task)
-    db.session.commit()
-
-    return task
+    return task_repository.create(task)
 
 
 def get_user_tasks(user_id, page, per_page):
-    return Task.query.filter_by(user_id=user_id).paginate(
-        page=page,
-        per_page=per_page,
-        error_out=False
-    )
+    return task_repository.get_user_tasks(user_id, page, per_page)
 
 
 def get_task_by_id(task_id):
-    return Task.query.get_or_404(task_id)
+    return task_repository.get_by_id(task_id)
 
 
 def update_task(task, data):
@@ -38,11 +31,10 @@ def update_task(task, data):
     if "completed" in data:
         task.completed = data["completed"]
 
-    db.session.commit()
+    task_repository.update()
 
     return task
 
 
 def delete_task(task):
-    db.session.delete(task)
-    db.session.commit()
+    task_repository.delete(task)
