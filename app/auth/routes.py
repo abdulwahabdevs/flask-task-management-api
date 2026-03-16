@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
 from app.models import User
+from app.utils.response import success_response, error_response
 from werkzeug.security import generate_password_hash
 
 
@@ -22,7 +23,7 @@ def register():
     ).first()
 
     if existing_user:
-        return jsonify({"error": "User already exists"}), 400
+        return jsonify(error_response(message="User already exists")), 400
     
     hashed_password = generate_password_hash(password)
 
@@ -34,7 +35,7 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    return jsonify({"message": "User registered successfully"}), 201
+    return jsonify(success_response(message="User registered successfully")), 201
 
 from flask_jwt_extended import create_access_token
 from werkzeug.security import check_password_hash
@@ -62,10 +63,9 @@ def login():
     
     access_token = create_access_token(identity=str(user.id))
 
-    return jsonify({
-        "message": "Login successful",
+    return jsonify(success_response({
         "access_token": access_token
-    }), 200
+    })), 200
 
 from flask_jwt_extended import jwt_required, get_jwt_identity
 

@@ -4,9 +4,14 @@ def test_create_task(auth_client):
         "title": "Test Task",
         "description": "Testing pytest"
     })
-    print(response.get_json())
+
     assert response.status_code == 201
 
+    data = response.get_json()["data"]
+
+    assert data["title"] == "Test Task"
+    assert data["description"] == "Testing pytest"
+    assert data["completed"] is False
 
 def test_get_tasks(auth_client):
 
@@ -19,19 +24,19 @@ def test_get_tasks(auth_client):
 
     assert response.status_code == 200
 
-    data = response.get_json()
-    print(data)
+    data = response.get_json()["data"]
+  
     assert len(data["tasks"]) == 1
 
 
-def test_update_taks(auth_client):
+def test_update_task(auth_client):
 
     create = auth_client.post("/tasks/", json={
         "title": "Test",
         "description": "Testing"
     })
 
-    task_id = create.get_json()["id"]
+    task_id = create.get_json()["data"]["id"]
 
     response = auth_client.put(f"/tasks/{task_id}", json={
         "completed": True
@@ -39,7 +44,7 @@ def test_update_taks(auth_client):
 
     assert response.status_code == 200
 
-    data = response.get_json()
+    data = response.get_json()["data"]
 
     assert data["completed"] is True
 
@@ -51,12 +56,16 @@ def test_delete_task(auth_client):
         "description": "testing deleting task"
     })
 
-    task_id = create.get_json()["id"]
+    task_id = create.get_json()["data"]["id"]
 
     response = auth_client.delete(f"/tasks/{task_id}")
 
     assert response.status_code == 200
 
+    data = response.get_json()
+
+    assert data["success"] is True
+    assert data["message"] == "Task deleted successfully"
 
 def test_user_cannot_access_other_users_task(client, auth_client):
 
@@ -66,7 +75,7 @@ def test_user_cannot_access_other_users_task(client, auth_client):
         "description": "Secret tshssh"
     })
 
-    task_id = task.get_json()["id"]
+    task_id = task.get_json()["data"]["id"]
 
     # register 2nd user
     client.post("/auth/register", json={
@@ -80,14 +89,15 @@ def test_user_cannot_access_other_users_task(client, auth_client):
         "password": "123456"
     })
 
-    token = login.get_json()["access_token"]
+    print(login.get_json())
+    token = login.get_json()["data"]["access_token"]
+
 
     response = client.get(
         f"/tasks/{task_id}",
         headers={"Authorization": f"Bearer {token}"}
     )
 
-    print(response.get_json())
     assert response.status_code == 403
 
 

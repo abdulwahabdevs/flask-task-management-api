@@ -5,7 +5,7 @@ def test_register(client):
         "email": "test@mail.com",
         "password": "123456"
     })
-    print(response.get_json())
+
     assert response.status_code == 201
 
 
@@ -29,8 +29,8 @@ def test_login_success(client, test_user):
 
     assert response.status_code == 200
 
-    data = response.get_json()
-    print(data)
+    data = response.get_json()["data"]
+
     assert "access_token" in data
 
 
