@@ -1,6 +1,7 @@
 from flask import Flask
 from .config import Config
 from .extensions import db, migrate, jwt
+from app.errors.handlers import register_error_handlers
 import os
 
 
@@ -18,5 +19,8 @@ def create_app():
     from app.tasks import tasks_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp, url_prefix="/tasks")
+
+    #error handlers
+    register_error_handlers(app)
 
     return app
