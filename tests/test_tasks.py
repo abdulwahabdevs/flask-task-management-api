@@ -173,3 +173,16 @@ def test_tasks_pagination(auth_client):
 
     assert len(data["tasks"]) == 5
     assert data["page"] == 1
+
+
+    def test_update_task_empty_payload(auth_client):
+        create = auth_client.post("/tasks/", json={
+            "title": "test",
+            "description": "test"
+        })
+
+        task_id = create.get_json()["data"]["id"]
+
+        response = auth_client.put(f"/tasks/{task_id}", json={})
+
+        assert response.status_code == 400

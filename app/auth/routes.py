@@ -2,14 +2,18 @@ from flask import Blueprint, request, jsonify
 from app.extensions import db
 from app.models import User
 from app.utils.response import success_response, error_response
+from app.schemas.auth_schema import RegisterSchema, LoginSchema
 from werkzeug.security import generate_password_hash
 
+
+register_schema = RegisterSchema()
+login_schema = LoginSchema()
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    data = request.get_json()
+    data = register_schema.load(request.json)
 
     username = data.get("username")
     email = data.get("email")
@@ -42,7 +46,7 @@ from werkzeug.security import check_password_hash
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    data = login_schema.load(request.json)
 
     if not data:
         return jsonify(error_response(message="Invalid JSON")), 400

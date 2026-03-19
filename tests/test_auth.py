@@ -58,3 +58,20 @@ def test_access_without_token(client):
 
     assert response.status_code == 401
 
+
+def test_login_missing_fields(client):
+
+    response = client.post("/auth/login", json={})
+
+    assert response.status_code == 400
+
+
+def test_register_invalid_email(client):
+
+    response = client.post("/auth/register", json={
+        "username": "test",
+        "email": "not-an-email",
+        "password": "123456"
+    })
+
+    assert response.status_code == 400
