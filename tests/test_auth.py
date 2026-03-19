@@ -8,6 +8,10 @@ def test_register(client):
 
     assert response.status_code == 201
 
+    data = response.get_json()
+
+    assert data["success"] is True
+
 
 def test_register_diplicate_user(client, test_user):
 
@@ -42,6 +46,11 @@ def test_login_wrong_password(client, test_user):
     })
 
     assert response.status_code == 401
+
+    data = response.get_json()
+    print(data)
+
+    assert data["success"] is False
 
 def test_access_without_token(client):
 

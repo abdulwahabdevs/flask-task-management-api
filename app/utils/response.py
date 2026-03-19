@@ -12,7 +12,9 @@ def success_response(data=None, message=None):
 
 def error_response(errors=None, message=None):
     response = {
-        "success": False
+        "success": False,
+        "message": message,
+        "errors": errors
     }
 
     if errors:

@@ -89,7 +89,6 @@ def test_user_cannot_access_other_users_task(client, auth_client):
         "password": "123456"
     })
 
-    print(login.get_json())
     token = login.get_json()["data"]["access_token"]
 
 
@@ -109,6 +108,11 @@ def test_create_task_missing_title(auth_client):
 
     assert response.status_code == 400
 
+    data = response.get_json()
+    print(data)
+    assert data["success"] is False
+    assert "title" in data["errors"]
+
 
 def test_create_task_invalid_completed(auth_client):
 
@@ -119,3 +123,53 @@ def test_create_task_invalid_completed(auth_client):
     })
 
     assert response.status_code == 400
+
+    data = response.get_json()
+    print(data)
+    assert data["success"] is False
+    assert "completed" in data["errors"]
+
+
+def test_get_nonexistent_task(auth_client):
+        
+    response = auth_client.get("/tasks/9999")
+
+    assert response.status_code == 404
+
+    data = response.get_json()
+    print(data)
+    assert data["success"] is False
+    assert data["message"] == "Resource not found"
+
+    
+def test_update_noneexistent_task(auth_client):
+
+    response = auth_client.put("/tasks/9999", json={
+            "title": "Updated"
+    })
+
+    assert response.status_code == 404
+
+
+def test_delete_nonexistent_task(auth_client):
+            
+    response = auth_client.delete("/tasks/9999")
+
+    assert response.status_code == 404
+
+
+
+def test_tasks_pagination(auth_client):
+
+    for i in range(10):
+        auth_client.post("/tasks/", json={
+            "title": f"Task {i}",
+            "description": "test"
+        })
+
+    response = auth_client.get("/tasks/?page=1&per_page=5")
+
+    data = response.get_json()["data"]
+
+    assert len(data["tasks"]) == 5
+    assert data["page"] == 1

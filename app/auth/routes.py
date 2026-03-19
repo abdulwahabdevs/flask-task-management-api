@@ -16,7 +16,7 @@ def register():
     password = data.get("password")
 
     if not username or not email or not password:
-        return jsonify({"error": "Missing required details"}), 400
+        return jsonify(error_response(message="Missing required details")), 400
     
     existing_user = User.query.filter(
         (User.username == username) | (User.email == email)
@@ -45,21 +45,21 @@ def login():
     data = request.get_json()
 
     if not data:
-        return jsonify({"error": "Invalid JSON"}), 400
+        return jsonify(error_response(message="Invalid JSON")), 400
     
     email = data.get("email")
     password = data.get("password")
 
     if not email or not password:
-        return jsonify({"error": "Missing email or password"}), 400
+        return jsonify(error_response(message="Missing email or password")), 400
     
     user = User.query.filter_by(email=email).first()
 
     if not user:
-        return jsonify({"error": "Invalid credentials"}), 401
+        return jsonify(error_response(message="Invalid credentials")), 401
     
     if not check_password_hash(user.password_hash, password):
-        return jsonify({"error": "Invalid credentials"}), 401
+        return jsonify(error_response(message="Invalid credentials")), 401
     
     access_token = create_access_token(identity=str(user.id))
 
@@ -76,7 +76,7 @@ def get_current_user():
     user = User.query.get(user_id)
 
     if not user:
-        return jsonify({"error": "User not found"}), 404
+        return jsonify(error_response(message="User not found")), 404
     
     return jsonify({
         "id": user.id,
