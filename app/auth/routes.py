@@ -2,7 +2,9 @@ from flask import Blueprint, request, jsonify
 from app.extensions import db
 from app.models import User
 from app.utils.response import success_response, error_response
+from app.utils.token_blacklist import add_token_to_blacklist
 from app.schemas.auth_schema import RegisterSchema, LoginSchema
+from flask_jwt_extended import jwt_required, get_jwt
 from werkzeug.security import generate_password_hash
 
 
@@ -105,3 +107,14 @@ def get_current_user():
         "email": user.email,
         "username": user.username
     }), 200
+
+
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    jti = get_jwt()["jti"]
+    add_token_to_blacklist(jti)
+
+    return jsonify(success_response(
+        message="Logged out successfully"
+    )), 200

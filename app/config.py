@@ -12,5 +12,5 @@ class Config:
 
     JWT_SECRET_KEY = os.getenv(
         "JWT_SECRET_KEY",
-        "super-secret-key-change-this"
+        "super-secret-key-change-this-now-123"
     )
