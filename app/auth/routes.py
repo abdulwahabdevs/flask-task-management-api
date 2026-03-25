@@ -110,9 +110,12 @@ def get_current_user():
 
 
 @auth_bp.route("/logout", methods=["POST"])
-@jwt_required()
+@jwt_required(verify_type=False)
 def logout():
-    jti = get_jwt()["jti"]
+
+    token = get_jwt()
+    jti = token["jti"]
+
     add_token_to_blacklist(jti)
 
     return jsonify(success_response(
