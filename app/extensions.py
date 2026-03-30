@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from app.utils.token_blacklist import is_token_blacklisted
-
+import redis
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -13,3 +13,10 @@ jwt = JWTManager()
 def check_if_token_revoked(jwt_header, jwt_payload):
     jti = jwt_payload["jti"]
     return is_token_blacklisted(jti)
+
+
+redis_client = redis.Redis(
+    host="localhost",
+    port=6379,
+    decode_responses=True
+)
