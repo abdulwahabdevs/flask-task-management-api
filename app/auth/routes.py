@@ -82,12 +82,22 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 @jwt_required(refresh=True)
 def refresh():
 
+    token = get_jwt()
+
+    jti = token["jti"]
+    exp = token["exp"]
+
+    # revoke used refresh token
+    add_token_to_blacklist(jti, exp)
+
     user_id = get_jwt_identity()
 
     new_access_token = create_access_token(identity=user_id)
+    new_refresh_token = create_refresh_token(identity=user_id)
 
     return jsonify(success_response({
-        "access_token": new_access_token
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token
     })), 200
 
 
@@ -114,9 +124,11 @@ def get_current_user():
 def logout():
 
     token = get_jwt()
-    jti = token["jti"]
 
-    add_token_to_blacklist(jti)
+    jti = token["jti"]
+    exp = token["exp"]
+
+    add_token_to_blacklist(jti, exp)
 
     return jsonify(success_response(
         message="Logged out successfully"
