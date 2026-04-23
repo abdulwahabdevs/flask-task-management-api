@@ -1,11 +1,12 @@
 from flask import Blueprint, request, jsonify
 from app.extensions import db
 from app.models import User
+from app.services.auth_service import AuthService
 from app.utils.response import success_response, error_response
 from app.utils.token_blacklist import add_token_to_blacklist
 from app.schemas.auth_schema import RegisterSchema, LoginSchema
 from flask_jwt_extended import jwt_required, get_jwt
-from werkzeug.security import generate_password_hash
+
 
 
 register_schema = RegisterSchema()
@@ -16,89 +17,27 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 @auth_bp.route("/register", methods=["POST"])
 def register():
     data = register_schema.load(request.json)
+    response, status = AuthService.register(data)
+    return jsonify(response), status
 
-    username = data.get("username")
-    email = data.get("email")
-    password = data.get("password")
-
-    if not username or not email or not password:
-        return jsonify(error_response(message="Missing required details")), 400
     
-    existing_user = User.query.filter(
-        (User.username == username) | (User.email == email)
-    ).first()
-
-    if existing_user:
-        return jsonify(error_response(message="User already exists")), 400
-    
-    hashed_password = generate_password_hash(password)
-
-    user = User(
-        username=username,
-        email=email,
-        password_hash=hashed_password
-    )
-    db.session.add(user)
-    db.session.commit()
-
-    return jsonify(success_response(message="User registered successfully")), 201
-
-from flask_jwt_extended import create_access_token, create_refresh_token
-from werkzeug.security import check_password_hash
-
 @auth_bp.route("/login", methods=["POST"])
 def login():
     data = login_schema.load(request.json)
-
-    if not data:
-        return jsonify(error_response(message="Invalid JSON")), 400
-    
-    email = data.get("email")
-    password = data.get("password")
-
-    if not email or not password:
-        return jsonify(error_response(message="Missing email or password")), 400
-    
-    user = User.query.filter_by(email=email).first()
-
-    if not user:
-        return jsonify(error_response(message="Invalid credentials")), 401
-    
-    if not check_password_hash(user.password_hash, password):
-        return jsonify(error_response(message="Invalid credentials")), 401
-    
-    access_token = create_access_token(identity=str(user.id))
-    refresh_token = create_refresh_token(identity=str(user.id))
-
-    return jsonify(success_response({
-        "access_token": access_token,
-        "refresh_token": refresh_token
-    })), 200
+    response, status = AuthService.login(data)
+    return jsonify(response), status
 
 
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
+
 @auth_bp.route("/refresh", methods=["POST"])
 @jwt_required(refresh=True)
 def refresh():
-
     token = get_jwt()
-
-    jti = token["jti"]
-    exp = token["exp"]
-
-    # revoke used refresh token
-    add_token_to_blacklist(jti, exp)
-
     user_id = get_jwt_identity()
 
-    new_access_token = create_access_token(identity=user_id)
-    new_refresh_token = create_refresh_token(identity=user_id)
-
-    return jsonify(success_response({
-        "access_token": new_access_token,
-        "refresh_token": new_refresh_token
-    })), 200
+    return AuthService.refresh(token, user_id)
 
 
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -120,16 +59,8 @@ def get_current_user():
 
 
 @auth_bp.route("/logout", methods=["POST"])
-@jwt_required(verify_type=False)
+@jwt_required()
 def logout():
-
     token = get_jwt()
 
-    jti = token["jti"]
-    exp = token["exp"]
-
-    add_token_to_blacklist(jti, exp)
-
-    return jsonify(success_response(
-        message="Logged out successfully"
-    )), 200
+    return AuthService.logout(token)
