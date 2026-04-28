@@ -1,5 +1,6 @@
 from app.models import User
 from app.extensions import db
+from app.errors.exceptions import AuthError
 from app.utils.response import success_response, error_response
 from app.utils.token_blacklist import add_token_to_blacklist
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -18,7 +19,7 @@ class AuthService:
         ).first()
 
         if existing_user:
-            return error_response(message="User already exists"), 400
+            raise AuthError("User already exists", 400)
         
         hashed_password = generate_password_hash(password)
 
@@ -30,7 +31,7 @@ class AuthService:
         db.session.add(user)
         db.session.commit()
 
-        return success_response(message="User registered successfully"), 201
+        return True
 
 
     @staticmethod
@@ -39,23 +40,23 @@ class AuthService:
         password = data.get("password")
 
         if not email or not password:
-            return error_response(message="Missing email or password"), 400
+            raise AuthError("Missing email or password", 400)
         
         user = User.query.filter_by(email=email).first()
 
         if not user:
-            return error_response(message="Invalid credentials"), 401
+            raise AuthError("Invalid credentials", 401)
         
         if not check_password_hash(user.password_hash, password):
-            return error_response(message="Invalid credentials"), 401
+            raise AuthError("Invalid credentials", 401)
         
         access_token = create_access_token(identity=str(user.id))
         refresh_token = create_refresh_token(identity=str(user.id))
 
-        return success_response({
+        return {
             "access_token": access_token,
             "refresh_token": refresh_token
-        }), 200
+        }
 
 
     @staticmethod
@@ -69,10 +70,10 @@ class AuthService:
         new_access_token = create_access_token(identity=user_id)
         new_refresh_token = create_refresh_token(identity=user_id)
 
-        return success_response({
+        return {
             "access_token": new_access_token,
             "refresh_token": new_refresh_token
-        }), 200
+        }
 
     @staticmethod
     def logout(token):
@@ -81,7 +82,5 @@ class AuthService:
 
         add_token_to_blacklist(jti, exp)
 
-        return success_response(
-            message="Logged out successfully"
-        ), 200
+        return True
 
