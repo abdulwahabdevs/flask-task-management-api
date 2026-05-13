@@ -13,16 +13,12 @@ tasks_schema = TaskSchema(many=True)
 @jwt_required()
 def create_task():
     user_id = int(get_jwt_identity())
+    
     data = task_schema.load(request.json)
 
-    task = task_service.create_task(
-        user_id,
-        data["title"],
-        data["description"],
-        data.get("completed", False)
-    )
-
-    return jsonify(success_response(task_schema.dump(task))), 201
+    response, status = task_service.create_task(user_id, data)
+    
+    return jsonify(response), status
 
 
 @tasks_bp.route("/", methods=["GET"])
@@ -33,18 +29,13 @@ def get_tasks():
     page = request.args.get("page", 1, type=int)
     per_page = request.args.get("per_page", 5, type=int)
 
-    pagination = task_service.get_user_tasks(user_id, page, per_page)
+    response, status = task_service.get_tasks(
+        user_id,
+        page,
+        per_page
+    )
 
-    tasks = pagination.items
-
-    result = tasks_schema.dump(tasks)
-
-    return jsonify(success_response({
-        "tasks": result,
-        "page": pagination.page,
-        "pages": pagination.pages,
-        "total": pagination.total
-    })), 200
+    return jsonify(response), status
 
 
 @tasks_bp.route("/<int:task_id>", methods=["GET"])
@@ -52,44 +43,32 @@ def get_tasks():
 def get_task(task_id):
     user_id = int(get_jwt_identity())
 
-    task = task_service.get_task_by_id(task_id)
+    response, status = task_service.get_task(task_id, user_id)
 
-    if task.user_id != user_id:
-        return jsonify(error_response(message="Forbidden")), 403
-    
-    return jsonify(success_response(task_schema.dump(task))), 200
+    return jsonify(response), status
 
 
 @tasks_bp.route("/<int:task_id>", methods=["PUT"])
 @jwt_required()
 def update_task(task_id):
     user_id = int(get_jwt_identity())
-    task = task_service.get_task_by_id(task_id)
-
-    if task.user_id != user_id:
-        return jsonify(error_response(message="Forbidden")), 403
     
     data = task_schema.load(request.json, partial=True)
-
-    if not data:
-        return jsonify(error_response(
-            message="At least one of title, description, or completed must be provided"
-        )), 400
     
-    task = task_service.update_task(task, data)
+    response, status = task_service.update_task(
+        task_id,
+        user_id,
+        data
+    )
 
-    return jsonify(success_response(task_schema.dump(task))), 200
+    return jsonify(response), status
 
 
 @tasks_bp.route("/<int:task_id>", methods=["DELETE"])
 @jwt_required()
 def delete_task(task_id):
     user_id = int(get_jwt_identity())
-    task = task_service.get_task_by_id(task_id)
 
-    if task.user_id != user_id:
-        return jsonify(error_response(message="Forbidden")), 403
-    
-    task_service.delete_task(task)
+    response, status = task_service.delete_task(task_id, user_id)
 
-    return jsonify(success_response(message= "Task deleted successfully")), 200
+    return jsonify(response), status
